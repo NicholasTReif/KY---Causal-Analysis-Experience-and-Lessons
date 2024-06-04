@@ -166,3 +166,44 @@ summarize_analyte <- function(x, transition_pars, region_class, stream_class, an
   return(x_list)
 }
 
+excel_wrapper <- function(x,file_path, file_id = NULL, set_width){
+  options(openxlsx.dateFormat="mm/dd/yyyy")
+  options(openxlsx.datetimeFormat="mm/dd/yyyy")
+
+  wb <- createWorkbook()
+  modifyBaseFont(wb, fontSize = 8)
+  
+  if(!any(class(x) %in% 'list')){
+    addWorksheet(wb, 'Sheet1')
+    writeDataTable(wb, sheet = 'Sheet1', x, startCol = 1, startRow = 1, 
+                   tableStyle = 'TableStyleMedium15', colNames = TRUE, withFilter = TRUE)
+    setColWidths(wb, 'Sheet1', widths = set_width, cols = 1:50)
+    if(!is.null(file_id)){
+      saveWorkbook(wb, paste0(file_path, file_id, '.xlsx'))
+    }else{openXL(wb)}
+  }
+  if(any(class(x) %in% 'list')){
+    for (df_name in names(x)){
+      x.i <- df_name
+      addWorksheet(wb, x.i)
+      writeDataTable(wb, sheet = x.i, x[[x.i]], startCol = 1, startRow = 1, 
+                     tableStyle = 'TableStyleMedium15', colNames = TRUE, withFilter = TRUE)
+      setColWidths(wb, x.i, widths = set_width, cols = 1:50)
+      print(paste("formatting", x.i, sep = " "))
+    }
+    if(!is.null(file_id)){
+      saveWorkbook(wb, paste0(file_path, file_id, '.xlsx'))
+    }else{openXL(wb)}
+  }
+}
+
+check_packages <- function(packages){
+  packages <- packages
+  
+  x <- lapply(packages, FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  })
+}

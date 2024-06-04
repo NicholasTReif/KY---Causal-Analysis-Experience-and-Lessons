@@ -106,7 +106,7 @@ render_sv_plots <- function(x,region, characteristic, axis_label,plot = FALSE, t
   v$ninefive <- v$`0.95`
   
   v <- v %>% 
-    select(matches(region_def), ninezero, ninefive, old_sv)
+    select(matches(region_def), ninezero, ninefive)
   
   p.iv <- df %>%
     left_join(cuts) %>%
@@ -122,7 +122,7 @@ render_sv_plots <- function(x,region, characteristic, axis_label,plot = FALSE, t
     geom_hline(aes(yintercept = tran_lb), linetype = 'dotted', size = 1)+
     # geom_vline(aes(xintercept = ninezero), linetype = 'solid', size = 0.75, color = 'red')+
     geom_vline(aes(xintercept = ninefive), linetype = 'solid', size = 0.75, color = 'red')+
-    geom_vline(aes(xintercept = old_sv), linetype = 'solid',  size = 1, color = 'blue') +
+    # geom_vline(aes(xintercept = old_sv), linetype = 'solid',  size = 1, color = 'blue') +
     theme_grey()+
     theme(panel.grid.major = element_line(size = 0.1),
           panel.grid.minor = element_blank(), 
@@ -173,7 +173,7 @@ render_sv_plots <- function(x,region, characteristic, axis_label,plot = FALSE, t
       patchwork::plot_layout(design = p_design)
     
     file_label <- str_replace(characteristic, pattern = ',', replacement = ' ')
-    ggsave(filename = paste0('V:\\DOWWQB\\Assessment\\CALM\\Screening-Values_2023\\summaries\\trends\\',file_label,'.png'),height = 9, width = 18, units = 'in',  plot = p,device = 'png')
+    ggsave(filename = paste0(figure_save_location,file_label,'.png'),height = 9, width = 18, units = 'in',  plot = p,device = 'png')
     
   }else{
     if(!plot %in% TRUE){

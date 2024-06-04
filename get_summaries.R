@@ -5,58 +5,37 @@ options(readr.show_col_types = FALSE)
 options(scipen = 999)
 library(foreign)
 library(tidyverse)
+library(patchwork)
 
-setwd('v:/dowwqb/github/kwade_repository/')
-source("./secondary_functions.R")
-source('./screening_value_analysis/processing_scripts/sv_functions.R')
-source('./screening_value_analysis/processing_scripts/render_sv_panel.R')
+setwd('C:/Users/nicholas.reif/Documents/GitHub/KY---Causal-Analysis-Experience-and-Lessons')
+source('./sv_functions.R')
+source('./render_index_panel.R')
 
 
-xo     <- readRDS('./screening_value_analysis/rds/kdas_same_day_sampling 2024-01-25.RDS')
-wd     <- c('v:/dowwqb/github/kwade_repository/screening_value_analysis/rds/')
-x.chem <- readRDS(paste0(wd,'/chemistry_', '2024-01-25', '.RDS'))
+repo               <- readRDS('./rds/repo_lookups.RDS')
+xo                 <- readRDS('./rds/subset_test.RDS')
+pchem.i            <- readRDS('./rds/chemistry_subset.RDS')
+stations           <- readRDS('./rds/stations.RDS')
+reference_stations <- readRDS('./rds/reference_stations.RDS')
 
-d <- get_new_rds(type = 'raw')
 
-d <- rename_reports(d)
-
-reference_stations <- d$`Project Field Activities` %>% 
-   filter(str_detect(PROJECT_NAME, pattern = 'MBI RECAL')) %>% 
-   select(STATION_NAME, PROJECT_NAME) %>% distinct() 
-
-stations <- d %>% 
-   get_sv_stations() %>% 
-   filter(STATION_NAME %in% xo$STATION_NAME) %>%
-   mutate(stream_class = ifelse(CATCHMENT_AREA < 5, 'headwater', 'wadeable'), 
-          primary = factor(primary, levels = c('MVIR', "PENNYROYAL", "BLUEGRASS", 'MOUNTAINS'))) %>% 
-   distinct()
-
-trend_stations <- d$`Project Stations` %>% 
-   filter(str_detect(STATION_CATEGORIES, pattern = 'REFERENCE TREND')) %>% 
-   select(STATION_NAME) %>% distinct() %>% 
-   .$STATION_NAME
-
-trend_chem <- x.chem %>% 
-   filter(STATION_NAME %in% trend_stations)
-
-pchem <- x.chem %>%  
-   filter(STATION_NAME %in% xo$STATION_NAME)%>% 
-   filter(!is.na(activity_date))
+check_packages(c("tidyverse", "openxlsx",'lubridate', 'writexl', 'scales', 'foreign', 'patchwork'))
 
 lat_long <- xo %>% 
    select(STATION_NAME, latitude, longitude)
 
-repo <- list()
-repo$lookups <- readRDS('./generic_project/repo/lookups/lookup_repository.RDS')
-
-chars <- colnames(xo)[c(71:72,74,77:82)]
+chars  <- colnames(xo)[c(71:72,74,77:82)]
 region <- c(rep('primary',4), rep('nitrogen_region',3), 'phosphorus_region', 'primary')
-units <- c(rep(' [mg/L]', 2), ' mhos/cm', rep(' [mg/L]', 6))
-key <- tibble('chars' = chars,'units'=units, 'region' = region)
+units  <- c(rep(' [mg/L]', 2), ' mhos/cm', rep(' [mg/L]', 6))
+key    <- tibble('chars' = chars,'units'=units, 'region' = region)
+
+
+figure_save_location <- paste0(getwd(),'/figures/')
+report_save_location <- paste0(getwd(),'/reports/')
 # -----------------------------------------------------------------------------------------------------------------------------------------
 
 for(i in 1:nrow(key)){
-
+    i <- 1
    region_def <- key$region[i]
    character_id <- key$chars[i]
    axis_id <- paste0(character_id, " ", key$units[i])
@@ -77,20 +56,10 @@ for(i in 1:nrow(key)){
                                        ifelse(INDEX_RATING %in% c('Good/Fair', 'Fair/Good'), 'ALOER',
                                               ifelse(INDEX_RATING %in% 'Fair', 'PS',
                                                      ifelse(INDEX_RATING %in% c("Poor", 'Very Poor'), 'NS', INDEX_RATING))))) %>% 
-      mutate(parameter_status = factor(parameter_status,levels = c('NS', 'PS','ALOER','FS' ))) %>%
-      filter(!RBP_RATING %in% 'Poor')
+      mutate(parameter_status = factor(parameter_status,levels = c('NS', 'PS','ALOER','FS' )))
 
-   # if(region_def %in% c('phosphorus_region', 'nitrogen_region')){
-   #    file_label <-  paste0(character_id, ' apr-oct')
-   #       pchem.i <- pchem %>%
-   #          filter(month > 3 & month < 11)
-   # 
-   #       xi <- xi %>%
-   #          filter(month(bio_date) > 3 & month(bio_date) < 11)
-   # }else{
-   #    pchem.i <- pchem
-      file_label <- paste0(character_id, ' fg_habitat')
-   # }
+
+      file_label <- paste0(character_id)
 
    x_list[['paired']] <- xi
    
@@ -157,11 +126,11 @@ for(i in 1:nrow(key)){
                            transition_pars = c('transitions included', 'transitions excluded')) %>% 
          bind_rows(x.i)
    }
-   
+   plot_path <- paste0(getwd(), './figures/')
    render_sv_plots(x = x_list, region = region_def, characteristic = character_id, axis_label = axis_id, trend_plots = FALSE)
 
-   # file_label <- '-no constraints'
-   excel_wrapper(out_list, set_width = 20, file_path = 'V:\\DOWWQB\\Assessment\\CALM\\Screening-Values_2023\\summaries\\fg_habitat\\', file_id = paste0(file_label))
+   excel_wrapper(out_list, set_width = 20, file_path = report_save_location, 
+                 file_id = paste0(file_label))
 }
 
 
